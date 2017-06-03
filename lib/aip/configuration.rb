@@ -16,9 +16,9 @@ module Aip
       @depositor ||= "acollier@calstate.edu"
     end
 
-    attr_writer :input_dir
-    def input_dir
-      @input_dir ||= "/Users/acollier/Temp/drew/"
+    attr_writer :import_dir
+    def import_dir
+      @import_dir ||= "/Users/acollier/Temp/drew/"
     end
 
     attr_writer :create_admin_sets
@@ -49,5 +49,12 @@ module Aip
     def default_university
       @default_university ||= "ENTER UNIVERSITY BEING IMPORTED"
     end
+
+    attr_writer :works
+    def works
+      @works ||= Rails.application.config_for(:aipworks)
+    end
+
+
   end
 end

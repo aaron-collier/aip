@@ -23,6 +23,10 @@ namespace :aip do
     end
 
     unzip_package(params)
+    collect_structure_files(params)
+    process_structure_files(params[:structure])
+    # collect_work_files()
+    log.info JSON.pretty_generate(params)
 
   end
 end
@@ -31,13 +35,8 @@ def log
   @log ||= Aip::Log.new(Aip.config.output_level)
 end
 
-def config
-  # @config ||= Rails.application.config_for(:packager)
-  puts Aip.config.depositor
-end
-
 def input_path
-  @input_path ||= Aip.config.input_dir
+  @input_path ||= Aip.config.import_dir
 end
 
 def output_path
@@ -57,9 +56,9 @@ def unzip_package(params)
   params[:unpacked_path] = initialize_directory(File.join(output_path, File.basename(params[:source_file], ".zip")))
   params[:files] = Array.new
 
-  Zip::File.open(params[:source_path]) do |file_to_extract|
+  Zip::File.open(File.join(input_path,params[:source_file])) do |file_to_extract|
     file_to_extract.each do |compressed_file|
-      params[:files] << {:source_path => File.join(params[:unpacked_path], compressed_file.name)}
+      params[:files] << { :source_file => compressed_file.name }
       unpack_file(file_to_extract,File.join(params[:unpacked_path], compressed_file.name))
     end
   end
@@ -125,6 +124,22 @@ def process_mets (mets_file,parentColl = nil)
   end
 end
 
+def collect_structure_files(params)
+  params[:structure] = Array.new
+  mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
+  file_list = mets_data.xpath(Aip.config.works['structure']['xpath'],Aip.config.works['structure']['namespace'])
+  file_list.each do |file|
+    params[:structure] << { :source_file => file.attr('xlink:href') }
+  end
+end
+
+def process_structure_files(params)
+  params.each do |structure_file|
+    unzip_package(structure_file)
+    collect_structure_files(structure_file)
+  end
+end
+
 def collect_parameters
 
   parameters = Hash.new {|h,k| h[k]=[]}
@@ -152,13 +167,6 @@ def collect_parameters
   return parameters
 end # collect_params
 
-def process_structure_files
-  structure_data = @mets_XML.xpath("#{config['collection_structure']['xpath']}",
-                                   config['collection_structure']['namespace'])
-  structure_data.each do |file_data|
-    unzip_package(file_data.attr('xlink:href'))
-  end
-end
 
 def collect_bitstreams
   fileList = @mets_XML.xpath("#{config['bitstream_structure']['xpath']}", config['bitstream_structure']['namespace'])
