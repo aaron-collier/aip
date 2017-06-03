@@ -10,7 +10,7 @@ namespace :aip do
 
     params = { :source_file => args[:file],
                :source_path => File.join(input_path,args[:file]),
-               :default_resource_type => "Thesis"
+               :default_resource_type => Aip.config.default_resource_type
              } or raise "No source input file provided."
 
     log.info "Loading import package from #{params[:source_file]}"
@@ -28,15 +28,16 @@ namespace :aip do
 end
 
 def log
-  @log ||= Packager::Log.new(config['output_level'])
+  @log ||= Aip::Log.new(Aip.config.output_level)
 end
 
 def config
-  @config ||= Rails.application.config_for(:packager)
+  # @config ||= Rails.application.config_for(:packager)
+  puts Aip.config.depositor
 end
 
 def input_path
-  @input_path ||= config['input_dir']
+  @input_path ||= Aip.config.input_dir
 end
 
 def output_path

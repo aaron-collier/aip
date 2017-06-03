@@ -1,4 +1,4 @@
-module Packager
+module Aip
   class Log < ActiveSupport::Logger
 
     attr_reader :start_time, :datetime_format, :output_level
@@ -9,7 +9,7 @@ module Packager
       @output_level = args[0]
 
       # reset the first argument to the log file for the super call
-      args[0] = 'log/packager.log'
+      args[0] = 'log/aip.log'
       super
 
       self.formatter = proc do |severity, datetime, progname, msg|

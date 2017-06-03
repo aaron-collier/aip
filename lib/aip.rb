@@ -1,7 +1,14 @@
-require "aip/version"
+require 'aip/version'
 require 'aip/railtie' if defined?(Rails)
+require 'aip/log'
 
 module Aip
+  extend ActiveSupport::Autoload
+
+  eager_autoload do
+    autoload :Configuration
+  end
+
   # @api public
   #
   # Exposes the Packager configuration
