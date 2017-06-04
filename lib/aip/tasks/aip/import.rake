@@ -25,6 +25,7 @@ namespace :aip do
     unzip_package(params)
     collect_structure_files(params)
     process_structure_files(params[:structure])
+    # collect_metadata(params)
     # collect_work_files()
     log.info JSON.pretty_generate(params)
 
@@ -68,59 +69,15 @@ def unpack_file(compressed_file,file_to_unpack)
   compressed_file.extract(File.basename(file_to_unpack),file_to_unpack) unless File.exist?(file_to_unpack)
 end
 
-def get_mets_data
-  if File.exist?(File.join(file_dir, "mets.xml"))
-    begin
-      processed_mets = process_mets(File.join(file_dir,"mets.xml"),parentColl)
-      File.rename(zpath,File.join(@complete_dir,zip_file))
-    rescue StandardError => e
-      log.error e
-      File.rename(zpath,File.join(@error_dir,zip_file))
-      abort if config['exit_on_error']
+def collect_metadata(params)
+  params.each do |structure_file|
+    unless structure_file[:files].nil?
+    structure_file[:files].each do |file|
+      if file[:source_file] === Aip.config.metadata_file
+        collect_parameters(structure_file)
+      end
     end
-    return processed_mets
-  else
-    log.warn "No METS data found in package."
   end
-end
-
-
-def process_mets (mets_file,parentColl = nil)
-
-  children = Array.new
-  files = Array.new
-  uploadedFiles = Array.new
-  depositor = ""
-  type = ""
-  # params = Hash.new {|h,k| h[k]=[]}
-
-  if File.exist?(mets_file)
-    @mets_XML = Nokogiri::XML(File.open(mets_file))
-
-    current_type = @mets_XML.root.attr("TYPE")
-    current_type.slice!("DSpace ")
-
-    log.info "Collecting files"
-    process_structure_files
-
-    createItem
-
-    collect_bitstreams.each do |bitstream|
-
-      ## Commented out while refactoring parsing code
-      ## file = File.open(bitstream['file_name'])
-      ## attached_file = Hyrax::UploadedFile.create(file: file)
-      ## attached_file.save
-      ## uploadedFiles << attached_file
-      ## file.close
-      ###########################################################
-    end # collect_files.each
-
-    ## Commented out while refactoring parsing code
-    ## item = createItem(params)
-    ## workFiles = AttachFilesToWorkJob.perform_now(item,uploadedFiles) unless item.nil?
-    ## return item
-    ####################################################################################
   end
 end
 
@@ -135,36 +92,39 @@ end
 
 def process_structure_files(params)
   params.each do |structure_file|
-    unzip_package(structure_file)
-    collect_structure_files(structure_file)
+    if File.exist?(File.join(input_path, structure_file[:source_file]))
+      unzip_package(structure_file)
+      collect_structure_files(structure_file)
+      process_structure_files(structure_file[:structure])
+      collect_metadata(structure_file[:structure])
+    end
   end
 end
 
-def collect_parameters
+def collect_parameters(params)
 
-  parameters = Hash.new {|h,k| h[k]=[]}
+  params[:metadata] = Hash.new {|h,k| h[k]=[]}
+  mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
 
-  config['fields'].each do |field|
+  Aip.config.works['fields'].each do |field|
     # puts field
     # if field.include? "xpath"
       field[1]['xpath'].each do |current_xpath|
         # puts "#{current_xpath}"
-        metadata = @mets_XML.xpath("#{config['DSpace ITEM']['desc_metadata_prefix']}#{current_xpath}",
-                                   config['DSpace ITEM']['namespace'])
+        metadata = mets_data.xpath("#{Aip.config.works['DSpace ITEM']['desc_metadata_prefix']}#{current_xpath}",
+                                   Aip.config.works['DSpace ITEM']['namespace'])
         if !metadata.empty?
           if field[1]['type'].include? "Array"
             metadata.each do |node|
-              parameters[field[0]] << node.inner_html
+              params[:metadata][field[0]] << node.inner_html
             end # metadata.each
           else
-            parameters[field[0]] = metadata.inner_html
+            params[:metadata][field[0]] = metadata.inner_html
           end # "Array"
         end # empty?
       end # xpath.each
     # end # field.xpath
   end # typeConfig.each
-  puts parameters
-  return parameters
 end # collect_params
 
 
