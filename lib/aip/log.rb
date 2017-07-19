@@ -28,17 +28,17 @@ module Aip
     end
 
     def info(str)
-      print_and_flush(str)
+      print_and_flush(str.green)
       super
     end
 
     def warn(str)
-      print_and_flush(str)
+      print_and_flush(str.yellow)
       super
     end
 
     def error(str)
-      print_and_flush(str)
+      print_and_flush(str.red)
       super
     end
 

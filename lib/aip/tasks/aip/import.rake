@@ -6,7 +6,21 @@ namespace :aip do
 
   desc 'Import DSpace AIP packages into the repository'
   task :import, [:file] =>  [:environment] do |t, args|
+
+    unless File.exists? ("#{Rails.root}/config/aip_works.yml") # && File.exists? ("#{Rails.root}/config/initializers/aip.rb")
+      log.error "AIP Config files not found."
+      log.info "Use `rails generate aip:config` to install AIP configuration files."
+      abort
+    end
+
     log.info "Starting rake task ".green + "packager:aip".yellow
+
+    unless args[:file]
+      log.error "No source input file provided."
+      log.info "Use `rake aip:import[\"filename\"]` to import an AIP package."
+      abort
+    end
+
 
     params = { :source_file => args[:file],
                :source_path => File.join(input_path,args[:file]),
@@ -18,7 +32,7 @@ namespace :aip do
     log.info params[:source_file]
 
     unless File.exists?(params[:source_path])
-      log.error "Exiting packager: input file [#{params[:source_file]}] not found."
+      log.error "Exiting packager: input file [#{params[:source_path]}] not found."
       abort
     end
 
@@ -83,7 +97,8 @@ end
 
 def collect_structure_files(params)
   params[:structure] = Array.new
-  mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
+  # mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
+  mets_data = read_xml(params[:source_file])
   file_list = mets_data.xpath(Aip.config.works['structure']['xpath'],Aip.config.works['structure']['namespace'])
   file_list.each do |file|
     params[:structure] << { :source_file => file.attr('xlink:href') }
@@ -104,7 +119,8 @@ end
 def collect_parameters(params)
 
   params[:metadata] = Hash.new {|h,k| h[k]=[]}
-  mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
+  # mets_data = Nokogiri::XML(File.open(File.join(output_path,File.basename(params[:source_file],'.zip'),params[:files][0][:source_file])))
+  mets_data = read_xml(params[:source_file])
 
   Aip.config.works['fields'].each do |field|
     # puts field
@@ -189,4 +205,8 @@ end
 def initialize_directory(dir)
   Dir.mkdir dir unless Dir.exist?(dir)
   return dir
+end
+
+def read_xml(file)
+  Nokogiri::XML(File.open(File.join(output_path,File.basename(file,'.zip'),Aip.config.metadata_file)))
 end

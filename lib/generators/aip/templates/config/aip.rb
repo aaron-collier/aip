@@ -3,7 +3,7 @@ Aip.config do |config|
   config.metadata_file = "mets.xml"
 
   config.depositor = "acollier@calstate.edu"
-  config.input_dir = "/Users/acollier/Temp/drew/"
+  config.import_dir = "/Users/acollier/Temp/drew/"
   config.create_admin_sets = true
 
   config.exit_on_error = true
